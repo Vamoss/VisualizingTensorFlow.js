@@ -60,7 +60,7 @@
       	let tensor = tf.tensor2d(input , [input.length, 1]);
       	let responseTensor = model.predict(tensor);
       	responseTensor.print();
-      	
+
       	tensor.dispose();
       	xs.dispose();
       	ys.dispose();
@@ -72,8 +72,9 @@
       async function train(){
       	for(let i=0; i<total; i++){
 			counter++;
-			let y = (i/total)*350;
-			let size = 100*(1-i/total)+10;
+			let x = (i/total)*400;
+			let y = (i/total)*390;
+			let size = 50*(1-i/total)+10;
 
 			// Train the model using the data.
 			let response = await model.fit(xs, ys);
@@ -86,6 +87,7 @@
 			  		ellipse(data[j]*50, y, size, size);
 			  	}
 	      	});
+
 	      	tensor.dispose();
 	      	responseTensor.dispose();
 		}
@@ -100,12 +102,11 @@
 	  function setup(){
 	  	createCanvas(400, 400);
 	  	background(0);
-	  	stroke(0, 0, 255);
-
+		
 	  	noLoop();
 
 	  	for(let i = 0; i<output.length; i++){
-	  		ellipse(output[i]*50, 350, 10, 10);
+	  		ellipse(output[i]*50, 390, 10, 10);
 	  	}
 	  }
 
