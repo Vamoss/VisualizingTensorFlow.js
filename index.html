@@ -1,6 +1,7 @@
 <html>
   <head>
     <!-- Load TensorFlow.js -->
+    <script src="p5.min.js"> </script>
     <script src="tfjs@0.13.0.js"> </script>
 
     <!-- Place your code in the script tag below. You can also use an external .js file -->
@@ -13,23 +14,104 @@
       model.add(tf.layers.dense({units: 3, inputShape: [1]}));
       model.add(tf.layers.dense({units: 1, inputShape: [1]}));
 
-      // Prepare the model for training: Specify the loss and the optimizer.
-      model.compile({loss: 'meanSquaredError', optimizer: 'sgd'});
+      let input = new Array(1, 2, 3, 4, 5, 6, 7);
+      let output = new Array(7, 6, 5, 4, 3, 2, 1);
+      const total = 300;
+      let counter = 0;
 
-      // Generate some synthetic data for training.
-      const xs = tf.tensor2d([1, 2, 3], [3, 1]);
-      const ys = tf.tensor2d([3, 2, 1], [3, 1]);
+      // Prepare the model for training: Specify the loss and the optimizer.
+
+      //0.17
+      //model.compile({loss: tf.losses.absoluteDifference, optimizer: 'sgd'});
+
+      //0.09
+      //model.compile({loss: tf.losses.huberLoss, optimizer: 'sgd'});
+
+      //0.00004
+      //model.compile({loss: tf.losses.meanSquaredError, optimizer: 'sgd'});
+
+      //0.003
+      //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.sgd(0.01)});
+
+      //0.000001
+	  //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.momentum(0.01, 0.5)});
+
+	  //0.000001
+	  //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.adagrad(0.1)});
+
+	  //max
+	  //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.adadelta(0.1)});
+	  
+	  //max - very precise
+	  model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.adam(0.1)});
+
+	  //max
+	  //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.adamax(0.1)});
+
+	  //0.003
+	  //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.rmsprop(0.01)});
+
+	  // Generate some synthetic data for training.
+      const xs = tf.tensor2d(input , [input.length, 1]);
+      const ys = tf.tensor2d(output, [output.length, 1]);
 
       train().then(()=>{
       	console.log("training complete");
-      	model.predict(tf.tensor2d([1, 2, 3], [3, 1])).print();
-      });
+      	let tensor = tf.tensor2d(input , [input.length, 1]);
+      	let responseTensor = model.predict(tensor);
+      	responseTensor.print();
+      	
+      	tensor.dispose();
+      	xs.dispose();
+      	ys.dispose();
+      	model.dispose();
+      	responseTensor.dispose();
+      	console.log(tf.memory().numTensors, "tensors");
+	  });
+
       async function train(){
-  		for(let i=0; i<1000; i++){
-	      // Train the model using the data.
-	      let response = await model.fit(xs, ys);
-	      console.log(response.history.loss[0]);
+      	for(let i=0; i<total; i++){
+			counter++;
+			let y = (i/total)*350;
+			let size = 100*(1-i/total)+10;
+
+			// Train the model using the data.
+			let response = await model.fit(xs, ys);
+			console.log(response.history.loss[0]);
+
+	      	let tensor = tf.tensor2d(input , [input.length, 1]);
+	      	let responseTensor = model.predict(tensor);
+	      	responseTensor.data().then(data => {
+		      	for(let j = 0; j<data.length; j++){
+			  		ellipse(data[j]*50, y, size, size);
+			  	}
+	      	});
+	      	tensor.dispose();
+	      	responseTensor.dispose();
 		}
+	  }
+
+	  let coords = [];
+
+	  function convert(x, y){
+	  	return {x: x, y: y};
+	  }
+
+	  function setup(){
+	  	createCanvas(400, 400);
+	  	background(0);
+	  	stroke(0, 0, 255);
+
+	  	noLoop();
+
+	  	for(let i = 0; i<output.length; i++){
+	  		ellipse(output[i]*50, 350, 10, 10);
+	  	}
+	  }
+
+	  function mousePressed(){
+	  	let coord = convert(mouseX, mouseY);
+	  	coords.push(coord);
 	  }
     </script>
   </head>
