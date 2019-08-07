@@ -1,5 +1,11 @@
 <html>
   <head>
+  	<style>
+  		body, html{
+  			margin: 0;
+  			padding: 0;
+  		}
+  	</style>
     <!-- Load TensorFlow.js -->
     <script src="p5.min.js"> </script>
     <script src="tfjs@0.13.0.js"> </script>
@@ -9,15 +15,22 @@
       // Notice there is no 'import' statement. 'tf' is available on the index-page
       // because of the script tag above.
 
-      // Define a model for linear regression.
-      const model = tf.sequential();
-      model.add(tf.layers.dense({units: 3, inputShape: [1]}));
-      model.add(tf.layers.dense({units: 1, inputShape: [1]}));
-
       let input = new Array(1, 2, 3, 4, 5, 6, 7);
       let output = new Array(7, 6, 5, 4, 3, 2, 1);
-      const total = 300;
+      const total = 200;
       let counter = 0;
+
+      configs = [];
+      configs.push({loss: tf.losses.absoluteDifference, optimizer: 'sgd', name:'absDiff\nsgd'});
+      configs.push({loss: tf.losses.huberLoss, optimizer: 'sgd', name:'huberLoss\nsgd'});
+      configs.push({loss: tf.losses.meanSquaredError, optimizer: 'sgd', name:'meanSqdError\nsgd'});
+      configs.push({loss: tf.losses.meanSquaredError, optimizer: tf.train.sgd(0.01), name:'meanSqdError\nsgd 0.01'});
+      configs.push({loss: tf.losses.meanSquaredError, optimizer: tf.train.momentum(0.01, 0.5), name:'meanSqdError\nmomentum'});
+      configs.push({loss: tf.losses.meanSquaredError, optimizer: tf.train.adagrad(0.1), name:'meanSqdError\nadagrad'});
+      //configs.push({loss: tf.losses.meanSquaredError, optimizer: tf.train.adadelta(0.1)});//RETURN NaN
+      configs.push({loss: tf.losses.meanSquaredError, optimizer: tf.train.adam(0.1), name:'meanSqdError\nadam'});
+      configs.push({loss: tf.losses.meanSquaredError, optimizer: tf.train.adamax(0.1), name:'meanSqdError\nadamax'});
+      configs.push({loss: tf.losses.meanSquaredError, optimizer: tf.train.rmsprop(0.01), name:'meanSqdError\nrmsprop'});
 
       // Prepare the model for training: Specify the loss and the optimizer.
 
@@ -43,7 +56,7 @@
 	  //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.adadelta(0.1)});
 	  
 	  //max - very precise
-	  model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.adam(0.1)});
+	  //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.adam(0.1)});
 
 	  //max
 	  //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.adamax(0.1)});
@@ -51,68 +64,90 @@
 	  //0.003
 	  //model.compile({loss: tf.losses.meanSquaredError, optimizer: tf.train.rmsprop(0.01)});
 
-	  // Generate some synthetic data for training.
-      const xs = tf.tensor2d(input , [input.length, 1]);
-      const ys = tf.tensor2d(output, [output.length, 1]);
 
-      train().then(()=>{
-      	console.log("training complete");
-      	let tensor = tf.tensor2d(input , [input.length, 1]);
-      	let responseTensor = model.predict(tensor);
-      	responseTensor.print();
+	  let ww = window.innerWidth / configs.length;
+	  let hh = window.innerHeight;
+	  let www = ww / (output.length+1);
+      for(let c = 0; c < configs.length; c++){
+		  // Generate some synthetic data for training.
+	      const xs = tf.tensor2d(input , [input.length, 1]);
+	      const ys = tf.tensor2d(output, [output.length, 1]);
 
-      	tensor.dispose();
-      	xs.dispose();
-      	ys.dispose();
-      	model.dispose();
-      	responseTensor.dispose();
-      	console.log(tf.memory().numTensors, "tensors");
-	  });
+	      // Define a model for linear regression.
+	      const model = tf.sequential();
+	      model.add(tf.layers.dense({units: 3, inputShape: [1]}));
+	      model.add(tf.layers.dense({units: 1, inputShape: [1]}));
 
-      async function train(){
-      	for(let i=0; i<total; i++){
-			counter++;
-			let x = (i/total)*400;
-			let y = (i/total)*390;
-			let size = 50*(1-i/total)+10;
+	      model.compile(configs[c]);
 
-			// Train the model using the data.
-			let response = await model.fit(xs, ys);
-			console.log(response.history.loss[0]);
-
+	      train().then(()=>{
+	      	console.log("training complete");
 	      	let tensor = tf.tensor2d(input , [input.length, 1]);
 	      	let responseTensor = model.predict(tensor);
-	      	responseTensor.data().then(data => {
-		      	for(let j = 0; j<data.length; j++){
-			  		ellipse(data[j]*50, y, size, size);
-			  	}
-	      	});
+	      	responseTensor.print();
 
 	      	tensor.dispose();
+	      	xs.dispose();
+	      	ys.dispose();
+	      	model.dispose();
 	      	responseTensor.dispose();
-		}
-	  }
+	      	//console.log(tf.memory().numTensors, "tensors");
 
-	  let coords = [];
+	      	drawText(c)
+		  });
 
-	  function convert(x, y){
-	  	return {x: x, y: y};
+	      async function train(){
+	      	for(let i=0; i<total; i++){
+				counter++;
+				let x = (i/total)*ww;
+				let y = (i/total)*hh-10;
+				let size = 10;
+
+				// Train the model using the data.
+				let response = await model.fit(xs, ys);
+				//console.log(response.history.loss[0]);
+
+		      	let tensor = tf.tensor2d(input , [input.length, 1]);
+		      	let responseTensor = model.predict(tensor);
+		      	responseTensor.data().then(data => {
+			      	for(let j = 0; j<data.length; j++){
+	      				fill(j/data.length*100, 100, 50);
+				  		ellipse(data[j]*www+ww*c, y, size, size);
+				  	}
+		      	});
+
+		      	tensor.dispose();
+		      	responseTensor.dispose();
+			}
+		  }
 	  }
 
 	  function setup(){
-	  	createCanvas(400, 400);
+	  	createCanvas(windowWidth, windowHeight);
 	  	background(0);
+	  	colorMode(HSL, 100);
 		
 	  	noLoop();
 
-	  	for(let i = 0; i<output.length; i++){
-	  		ellipse(output[i]*50, 390, 10, 10);
-	  	}
+		for(let c = 0; c < configs.length; c++){
+			for(let i = 0; i<output.length; i++){
+				ellipse(output[i]*www+ww*c, hh-10, 10, 10);
+			}
+			stroke(255)
+			line(ww*c, 0, ww*c, height)
+			drawText(c)
+		}
+
+		strokeWeight(1);
+		stroke(0);
 	  }
 
-	  function mousePressed(){
-	  	let coord = convert(mouseX, mouseY);
-	  	coords.push(coord);
+	  function drawText(index){
+		fill(255);
+		stroke(0);
+		strokeWeight(3);
+		textSize(18);
+		text(configs[index].name, ww*index+20, hh-50);
 	  }
     </script>
   </head>
